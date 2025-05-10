@@ -1,0 +1,39 @@
+from datetime import datetime
+from exts import db
+
+
+# Order Model
+class Order(db.Model):
+    __tablename__ = 'order'
+    id = db.Column(db.Integer, primary_key=True)
+    quantity = db.Column(db.Integer, nullable=False)
+    price = db.Column(db.Float, nullable=False)
+    status = db.Column(db.String(50), default='pending')
+    payment_id = db.Column(db.String(255), nullable=True)
+    receipt_url = db.Column(db.String(1000))
+    date_created = db.Column(db.DateTime, default=datetime.utcnow)
+
+    customer_id = db.Column(db.Integer,
+                            db.ForeignKey('customer.id'),
+                            nullable=False)
+    product_id = db.Column(db.Integer,
+                           db.ForeignKey('product.id'),
+                           nullable=False)
+
+    def __repr__(self):
+        return f'<Order {self.id} - {self.status}>'
+
+
+# Receipt Model for tracking generated receipts
+class Receipt(db.Model):
+    __tablename__ = 'receipt'
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)
+    filename = db.Column(db.String(255), nullable=False)
+    generated_on = db.Column(db.DateTime, default=datetime.utcnow)
+
+    order = db.relationship('Order',
+                            backref=db.backref('receipt', uselist=False))
+
+    def __repr__(self):
+        return f'<Receipt {self.filename}>'

@@ -1,0 +1,57 @@
+# Python virtual environment
+venv/
+env/
+.myenv/
+
+# VS Code settings
+.vscode/
+
+# Byte-compiled Python files
+*.pyc
+__pycache__/
+
+# Environment variables
+.env
+*.env
+
+# Logs and caches
+*.log
+*.sqlite3
+instance/
+*.pid
+
+# Compiled Python files
+*.pyo
+*.pyd
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Pytest cache
+.pytest_cache/
+
+# Coverage reports
+htmlcov/
+.coverage
+*.cover
+
+# Flask & Database files
+migrations/
+*.db
+
+# Docker & Deployment
+*.dockerignore
+Dockerfile
+
+# IDE-specific files
+.idea/
+*.swp
+*.swo
+*.swn
+
+# Node.js dependencies (if using frontend)
+node_modules/
+
+
+# Developer Specific files
+requirements-dev.txt
