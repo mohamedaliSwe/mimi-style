@@ -2,7 +2,8 @@ from flask import Flask, make_response, jsonify
 from flask_restx import Api, Resource
 
 from exts import db, jwt, migrate, mail
-from models import Role, Customer, AuditLog, Order, Receipt, Cart, Product
+from models import (Role, Customer, AuditLog, Order, Receipt, Cart, Product,
+                    Category, ProductImage)
 
 
 def create_app(config):
@@ -46,7 +47,9 @@ def create_app(config):
             "Order": Order,
             "Receipt": Receipt,
             "Cart": Cart,
-            "Product": Product
+            "Product": Product,
+            "Category": Category,
+            "ProductImage": ProductImage
         }
 
     return app

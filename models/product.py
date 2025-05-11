@@ -1,9 +1,35 @@
-from datetime import datetime
 from exts import db
+from .base import Base
+
+
+# Categories Model
+class Category(Base):
+    __tablename__ = 'categories'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+
+    products = db.relationship('Product', backref='category', lazy=True)
+
+    def __repr__(self):
+        return f'<Category {self.name}>'
+
+
+# Product Images Model
+class ProductImage(Base):
+    __tablename__ = 'product_images'
+    id = db.Column(db.Integer, primary_key=True)
+    image_url = db.Column(db.String(255), nullable=False)
+
+    product_id = db.Column(db.Integer,
+                           db.ForeignKey('product.id'),
+                           nullable=False)
+
+    def __repr__(self):
+        return f'<ProductImage {self.image_url}>'
 
 
 # Product Model
-class Product(db.Model):
+class Product(Base):
     __tablename__ = 'product'
     id = db.Column(db.Integer, primary_key=True)
     product_name = db.Column(db.String(100), nullable=False)
@@ -11,10 +37,16 @@ class Product(db.Model):
     current_price = db.Column(db.Float, nullable=False)
     previous_price = db.Column(db.Float)
     in_stock = db.Column(db.Integer, nullable=False)
-    product_picture = db.Column(db.String(1000))
     flash_sale = db.Column(db.Boolean, default=False)
-    date_added = db.Column(db.DateTime, default=datetime.utcnow)
 
+    category_id = db.Column(db.Integer,
+                            db.ForeignKey('categories.id'),
+                            nullable=False)
+
+    images = db.relationship('ProductImage',
+                             backref='product',
+                             lazy=True,
+                             cascade="all, delete-orphan")
     carts = db.relationship('Cart', backref='product', lazy=True)
     orders = db.relationship('Order', backref='product', lazy=True)
 

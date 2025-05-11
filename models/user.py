@@ -1,10 +1,11 @@
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from exts import db
+from .base import Base
 
 
 # Role Model
-class Role(db.Model):
+class Role(Base):
     __tablename__ = 'role'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True, nullable=False)
@@ -17,14 +18,14 @@ class Role(db.Model):
 
 
 # Customer Model
-class Customer(db.Model):
+class Customer(Base):
     __tablename__ = 'customer'
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(100), unique=True, nullable=False)
     username = db.Column(db.String(100), nullable=False)
+    address = db.Column(db.String(300))
     telephone = db.Column(db.String(100), nullable=False)
     password_hash = db.Column(db.String(150), nullable=False)
-    date_joined = db.Column(db.DateTime(), default=datetime.utcnow)
 
     role_id = db.Column(db.Integer, db.ForeignKey('role.id'))
 
@@ -53,7 +54,7 @@ class Customer(db.Model):
 
 
 # Audit logging
-class AuditLog(db.Model):
+class AuditLog(Base):
     __tablename__ = 'audit_log'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('customer.id'))
