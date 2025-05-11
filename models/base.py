@@ -5,11 +5,6 @@ from exts import db
 class Base(db.Model):
     """Defines a base model"""
     __abstract__ = True
-
-    id = db.Column(db.Integer,
-                   primary_key=True,
-                   autoincrement=True,
-                   nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow())
     updated_at = db.Column(db.DateTime,
                            default=datetime.utcnow(),

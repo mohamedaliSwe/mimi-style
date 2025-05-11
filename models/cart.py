@@ -8,9 +8,7 @@ class Cart(Base):
     id = db.Column(db.Integer, primary_key=True)
     quantity = db.Column(db.Integer, nullable=False, default=1)
 
-    customer_id = db.Column(db.Integer,
-                            db.ForeignKey('customer.id'),
-                            nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     product_id = db.Column(db.Integer,
                            db.ForeignKey('product.id'),
                            nullable=False)

@@ -12,9 +12,7 @@ class Order(Base):
     payment_id = db.Column(db.String(255), nullable=True)
     receipt_url = db.Column(db.String(1000))
 
-    customer_id = db.Column(db.Integer,
-                            db.ForeignKey('customer.id'),
-                            nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     product_id = db.Column(db.Integer,
                            db.ForeignKey('product.id'),
                            nullable=False)

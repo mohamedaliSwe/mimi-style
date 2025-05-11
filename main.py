@@ -2,7 +2,8 @@ from flask import Flask, make_response, jsonify
 from flask_restx import Api, Resource
 
 from exts import db, jwt, migrate, mail
-from models import (Role, Customer, AuditLog, Order, Receipt, Cart, Product,
+from api import auth_ns
+from models import (Role, User, AuditLog, Order, Receipt, Cart, Product,
                     Category, ProductImage)
 
 
@@ -24,6 +25,7 @@ def create_app(config):
               version="1.0",
               description="Welcome to Mimi Super Style online store.",
               doc="/docs")
+    api.add_namespace(auth_ns, path="/api/auth")
 
     db.init_app(app)
     jwt.init_app(app)
@@ -42,7 +44,7 @@ def create_app(config):
         return {
             "db": db,
             "Role": Role,
-            "Customer": Customer,
+            "User": User,
             "AuditLog": AuditLog,
             "Order": Order,
             "Receipt": Receipt,
