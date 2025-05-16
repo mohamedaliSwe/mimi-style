@@ -1,10 +1,14 @@
 from flask import request, make_response, jsonify
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_jwt_extended import (create_access_token, create_refresh_token,
+                                get_jwt_identity, get_jwt, jwt_required)
 from flask_restx import fields, Namespace, Resource
 from exts import db
 from models import User
 
 auth_ns = Namespace("auth", description="User Authentication")
+
+jwt_blocklist = set()
 
 registration_model = auth_ns.model(
     "User registration", {
@@ -62,17 +66,18 @@ class UserResource(Resource):
                     jsonify({"message": "Number already registered"}), 400)
 
             # check if password and confirmation match
-            if response["password"] != response["password_confirmation"]:
+            if response.get("password") != response.get(
+                    "password_confirmation"):
                 return make_response(
                     jsonify({"message": "Passwords do not match"}), 400)
 
             # Hash the passowrd
-            password_hash = generate_password_hash(response["password"])
+            password_hash = generate_password_hash(response.get("password"))
 
             # Register the user
-            new_user = User(username=response["username"],
-                            email=response["email"],
-                            telephone=response["telephone"],
+            new_user = User(username=response.get("username"),
+                            email=response.get("email"),
+                            telephone=response.get("telephone"),
                             password_hash=password_hash)
 
             new_user.save()
@@ -83,3 +88,96 @@ class UserResource(Resource):
             db.session.rollback()
             return make_response(
                 jsonify({"message": f"Error creating user {str(e)}"}), 500)
+
+
+@auth_ns.route("/login")
+class UserLogin(Resource):
+
+    @auth_ns.expect(login_model)
+    def post(self):
+        """Logs in user"""
+        try:
+            response = request.get_json()
+
+            # Check if both all fields are provide
+            if not response.get("email") or not response.get("password"):
+                return make_response(
+                    jsonify({"message": "Both fields are required"}), 400)
+
+            # Check if user is registered
+            user = User.query.filter_by(email=response.get("email")).first()
+            if not user:
+                return make_response(
+                    jsonify({"message": "User is not registered"}), 400)
+
+            # Check if password and email is correct
+            if not check_password_hash(user.password_hash,
+                                       response["password"]):
+                return make_response(
+                    jsonify({"message": "Incorrect password"}), 400)
+
+            # Create identity with additional claims
+            identity = str(user.id)
+            additional_claims = {"username": user.username}
+
+            # Generate token
+            access_token = create_access_token(
+                identity=identity, additional_claims=additional_claims)
+
+            refresh_token = create_refresh_token(
+                identity=identity, additional_claims=additional_claims)
+
+            return make_response(
+                jsonify({
+                    "message": "Login successful",
+                    "data": {
+                        "access_token": access_token,
+                        "refresh_token": refresh_token
+                    }
+                }), 200)
+
+        except Exception as e:
+            return make_response(
+                jsonify({"message": f"Error loggin in user {str(e)}"}), 500)
+
+
+@auth_ns.route("/logout")
+class LogoutUser(Resource):
+
+    @jwt_required()
+    def post(self):
+        """Logout User"""
+        jti = get_jwt()["jti"]
+        jwt_blocklist.add(jti)
+        return make_response(jsonify({"message": "Logged out successfully"}))
+
+
+@auth_ns.route("/refresh")
+class RefreshToken(Resource):
+
+    @jwt_required(refresh=True)
+    def post(self):
+        """Generate a new access token from a refresh token"""
+        try:
+            # Get current user identity and claims
+            current_user = get_jwt_identity()
+            current_claims = get_jwt()
+
+            # Extract claims to carry into new access token
+            additional_claims = {
+                "username": current_claims.get("username"),
+            }
+
+            # Generate new access token
+            new_access_token = create_access_token(
+                identity=current_user, additional_claims=additional_claims)
+
+            return make_response(jsonify({"access_token": new_access_token}),
+                                 200)
+
+        except Exception as e:
+            return make_response(
+                jsonify({
+                    "status": "error",
+                    "message": f"Error refreshing token: {str(e)}"
+                }), 500)
