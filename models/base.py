@@ -4,11 +4,12 @@ from exts import db
 
 class Base(db.Model):
     """Defines a base model"""
+
     __abstract__ = True
     created_at = db.Column(db.DateTime, default=datetime.utcnow())
-    updated_at = db.Column(db.DateTime,
-                           default=datetime.utcnow(),
-                           onupdate=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow(), onupdate=datetime.utcnow
+    )
 
     # Save method
     def save(self):
