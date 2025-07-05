@@ -28,7 +28,8 @@ registration_model = auth_ns.model(
 
 login_model = auth_ns.model(
     "User Login",
-    {"email": fields.String(required=True), "password": fields.String(required=True)},
+    {"email": fields.String(required=True),
+     "password": fields.String(required=True)},
 )
 
 password_reset = auth_ns.model(
@@ -200,7 +201,8 @@ class RefreshToken(Resource):
         except Exception as e:
             return make_response(
                 jsonify(
-                    {"status": "error", "message": f"Error refreshing token: {str(e)}"}
+                    {"status": "error",
+                        "message": f"Error refreshing token: {str(e)}"}
                 ),
                 500,
             )

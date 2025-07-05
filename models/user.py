@@ -19,12 +19,16 @@ class Role(Base):
 # user Model
 class User(Base):
     __tablename__ = "user"
-    id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(100), unique=True, nullable=False)
     username = db.Column(db.String(100), nullable=False)
     address = db.Column(db.String(300))
     telephone = db.Column(db.String(100), nullable=False)
     password_hash = db.Column(db.String(150), nullable=False)
+    is_verified = db.Column(db.Boolean, default=False)
+    verification_token = db.Column(db.String(255), nullable=True)
+    verification_token_expires = db.Column(db.DateTime, nullable=True)
+    reset_token = db.Column(db.String(255), nullable=True)
+    reset_token_expires = db.Column(db.DateTime, nullable=True)
 
     role_id = db.Column(db.Integer, db.ForeignKey("role.id"))
 
@@ -42,7 +46,6 @@ class User(Base):
 # Audit logging
 class AuditLog(Base):
     __tablename__ = "audit_log"
-    id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     action = db.Column(db.String(255), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)

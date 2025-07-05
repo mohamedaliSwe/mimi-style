@@ -5,7 +5,6 @@ from .base import Base
 # Categories Model
 class Category(Base):
     __tablename__ = "categories"
-    id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
 
     products = db.relationship("Product", backref="category", lazy=True)
@@ -17,10 +16,10 @@ class Category(Base):
 # Product Images Model
 class ProductImage(Base):
     __tablename__ = "product_images"
-    id = db.Column(db.Integer, primary_key=True)
     image_url = db.Column(db.String(255), nullable=False)
 
-    product_id = db.Column(db.Integer, db.ForeignKey("product.id"), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey(
+        "product.id"), nullable=False)
 
     def __repr__(self):
         return f"<ProductImage {self.image_url}>"
@@ -29,7 +28,6 @@ class ProductImage(Base):
 # Product Model
 class Product(Base):
     __tablename__ = "product"
-    id = db.Column(db.Integer, primary_key=True)
     product_name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
     current_price = db.Column(db.Float, nullable=False)
@@ -37,7 +35,8 @@ class Product(Base):
     in_stock = db.Column(db.Integer, nullable=False)
     flash_sale = db.Column(db.Boolean, default=False)
 
-    category_id = db.Column(db.Integer, db.ForeignKey("categories.id"), nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey(
+        "categories.id"), nullable=False)
 
     images = db.relationship(
         "ProductImage", backref="product", lazy=True, cascade="all, delete-orphan"
