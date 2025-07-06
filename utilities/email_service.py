@@ -6,7 +6,7 @@ from exts import mail
 
 
 class EmailService:
-    """"A service for sending emails using Flask-Mail"""
+    """ "A service for sending emails using Flask-Mail"""
 
     @staticmethod
     def send_async_email(app, msg):
@@ -15,19 +15,21 @@ class EmailService:
 
     @staticmethod
     def send_mail(subject, recipients, body, html=None, sender=None):
-        """"Send basic email"""
+        """ "Send basic email"""
         app = current_app._get_current_object()
         msg = Message(
             subject=subject,
             sender=sender or app.config.get("MAIL_DEFAULT_SENDER"),
-            recipients=recipients,
+            recipients=recipients if isinstance(recipients, list) else [recipients],
             body=body,
             html=html,
         )
         Thread(target=EmailService.send_async_email, args=(app, msg)).start()
 
     @staticmethod
-    def send_template_email(subject, body, recipients, template, context=None, sender=None):
+    def send_template_email(
+        subject, body, recipients, template, context=None, sender=None
+    ):
         """Send email using a template"""
         app = current_app._get_current_object()
         context = context or {}

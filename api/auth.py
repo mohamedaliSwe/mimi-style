@@ -1,3 +1,6 @@
+import os
+import secrets
+from datetime import datetime, timedelta
 from flask import request, make_response, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import (
@@ -10,10 +13,12 @@ from flask_jwt_extended import (
 from flask_restx import fields, Namespace, Resource
 from exts import db
 from models import User
+from utilities import EmailService
 
 auth_ns = Namespace("auth", description="User Authentication")
 
 jwt_blocklist = set()
+HOST_URL = os.environ.get("HOST_URL", "http://localhost:5000")
 
 registration_model = auth_ns.model(
     "User registration",
@@ -28,8 +33,7 @@ registration_model = auth_ns.model(
 
 login_model = auth_ns.model(
     "User Login",
-    {"email": fields.String(required=True),
-     "password": fields.String(required=True)},
+    {"email": fields.String(required=True), "password": fields.String(required=True)},
 )
 
 password_reset = auth_ns.model(
@@ -85,8 +89,12 @@ class UserResource(Resource):
                     jsonify({"message": "Passwords do not match"}), 400
                 )
 
-            # Hash the passowrd
+            # Hash the password
             password_hash = generate_password_hash(response.get("password"))
+
+            # Generate verification token
+            verification_token = secrets.token_urlsafe(32)
+            verification_token_expires = datetime.utcnow() + timedelta(hours=1)
 
             # Register the user
             new_user = User(
@@ -94,15 +102,76 @@ class UserResource(Resource):
                 email=response.get("email"),
                 telephone=response.get("telephone"),
                 password_hash=password_hash,
+                verification_token=verification_token,
+                verification_token_expires=verification_token_expires,
+            )
+
+            # Send verification email
+            EmailService.send_mail(
+                subject="Verify your account",
+                recipients=new_user.email,
+                body=f"""
+
+                Hi {new_user.username},
+                Please verify your account by clicking the link below:
+                {HOST_URL}/api/auth/verify/{verification_token}
+                This link will expire in 1 hour.
+                """,
             )
 
             new_user.save()
-            return make_response(jsonify({"message": "User registered Successfully"}))
+
+            return make_response(
+                jsonify(
+                    {
+                        "message": "User registered Successfully",
+                        "info": f"A verification email has been sent to {new_user.email}",
+                    }
+                ),
+                201,
+            )
 
         except Exception as e:
             db.session.rollback()
             return make_response(
                 jsonify({"message": f"Error creating user {str(e)}"}), 500
+            )
+
+
+@auth_ns.route("/verify/<string:token>")
+class VerifyUser(Resource):
+
+    def get(self, token):
+        """Verify User Account"""
+        try:
+            # Get user by token
+            user = User.query.filter_by(verification_token=token).first()
+
+            # Check if the token is valid
+            if not user:
+                return make_response(
+                    jsonify({"message": "Invalid verification token"}), 400
+                )
+
+            # Check if the token has expired
+            if user.verification_token_expires < datetime.utcnow():
+                return make_response(
+                    jsonify({"message": "Verification token expired"}), 400
+                )
+
+            # Verify the user
+            user.is_verified = True
+            user.verification_token = None
+            user.verification_token_expires = None
+            user.save()
+
+            return make_response(
+                jsonify({"message": "User verified successfully"}), 200
+            )
+
+        except Exception as e:
+            return make_response(
+                jsonify({"message": f"Error verifying user: {str(e)}"}), 500
             )
 
 
@@ -126,6 +195,12 @@ class UserLogin(Resource):
             if not user:
                 return make_response(
                     jsonify({"message": "User is not registered"}), 400
+                )
+
+            # Check if user is verified
+            if not user.is_verified:
+                return make_response(
+                    jsonify({"message": "Please verify your email address"}), 400
                 )
 
             # Check if password and email is correct
@@ -161,6 +236,119 @@ class UserLogin(Resource):
         except Exception as e:
             return make_response(
                 jsonify({"message": f"Error loggin in user {str(e)}"}), 500
+            )
+
+
+@auth_ns.route("/profile")
+class UserProfile(Resource):
+
+    @jwt_required()
+    def get(self):
+        """Get User Profile"""
+        try:
+            # Get current user identity
+            current_user_id = get_jwt_identity()
+
+            # Fetch user from database
+            user = User.query.get(current_user_id)
+
+            if not user:
+                return make_response(jsonify({"message": "User not found"}), 404)
+
+            # Prepare user profile data
+            user_data = {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "telephone": user.telephone,
+                "is_verified": user.is_verified,
+                "created_at": user.created_at.isoformat(),
+            }
+
+            return make_response(jsonify({"user": user_data}), 200)
+
+        except Exception as e:
+            return make_response(
+                jsonify({"message": f"Error fetching profile: {str(e)}"}), 500
+            )
+
+    @jwt_required()
+    def put(self):
+        """Update User Profile"""
+        try:
+            # Get current user identity
+            current_user_id = get_jwt_identity()
+            user = User.query.get(current_user_id)
+
+            # Check if user exists
+            if not user:
+                return make_response(jsonify({"message": "User not found"}), 404)
+
+            data = request.get_json()
+
+            # Update the provided fields
+            if "username" in data:
+                existing_user = User.query.filter_by(username=data["username"]).first()
+                if existing_user and existing_user.id != user.id:
+                    return make_response(
+                        jsonify({"message": "Username already exists"}), 400
+                    )
+                user.username = data["username"]
+
+            if "email" in data:
+                existing_email = User.query.filter_by(email=data["email"]).first()
+                if existing_email and existing_email.id != user.id:
+                    return make_response(
+                        jsonify({"message": "Email already exists"}), 400
+                    )
+                user.email = data["email"]
+
+            if "telephone" in data:
+                existing_telephone = User.query.filter_by(
+                    telephone=data["telephone"]
+                ).first()
+                if existing_telephone and existing_telephone.id != user.id:
+                    return make_response(
+                        jsonify({"message": "Telephone already exists"}), 400
+                    )
+                user.telephone = data["telephone"]
+
+            if "address" in data:
+                user.address = data["address"]
+
+            user.save()
+
+            return make_response(
+                jsonify({"message": "Profile updated successfully"}), 200
+            )
+
+        except Exception as e:
+            return make_response(
+                jsonify({"message": f"Error updating profile: {str(e)}"}), 500
+            )
+
+    @jwt_required()
+    def delete(self):
+        """Delete User Account"""
+        try:
+            # Get current user identity
+            current_user_id = get_jwt_identity()
+            user = User.query.get(current_user_id)
+
+            # Check if user exists
+            if not user:
+                return make_response(jsonify({"message": "User not found"}), 404)
+
+            # Delete user account
+            user.delete()
+
+            return make_response(
+                jsonify({"message": "User account deleted successfully"}), 200
+            )
+
+        except Exception as e:
+            return make_response(
+                jsonify({"message": f"Error deleting account: {str(e)}"}), 500
             )
 
 
@@ -201,8 +389,7 @@ class RefreshToken(Resource):
         except Exception as e:
             return make_response(
                 jsonify(
-                    {"status": "error",
-                        "message": f"Error refreshing token: {str(e)}"}
+                    {"status": "error", "message": f"Error refreshing token: {str(e)}"}
                 ),
                 500,
             )

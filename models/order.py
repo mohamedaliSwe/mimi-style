@@ -12,8 +12,7 @@ class Order(Base):
     receipt_url = db.Column(db.String(1000))
 
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    product_id = db.Column(db.Integer, db.ForeignKey(
-        "product.id"), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey("product.id"), nullable=False)
 
     def __repr__(self):
         return f"<Order {self.id} - {self.status}>"
@@ -25,8 +24,7 @@ class Receipt(Base):
     order_id = db.Column(db.Integer, db.ForeignKey("order.id"), nullable=False)
     filename = db.Column(db.String(255), nullable=False)
 
-    order = db.relationship(
-        "Order", backref=db.backref("receipt", uselist=False))
+    order = db.relationship("Order", backref=db.backref("receipt", uselist=False))
 
     def __repr__(self):
         return f"<Receipt {self.filename}>"

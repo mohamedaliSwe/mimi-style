@@ -18,8 +18,7 @@ class ProductImage(Base):
     __tablename__ = "product_images"
     image_url = db.Column(db.String(255), nullable=False)
 
-    product_id = db.Column(db.Integer, db.ForeignKey(
-        "product.id"), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey("product.id"), nullable=False)
 
     def __repr__(self):
         return f"<ProductImage {self.image_url}>"
@@ -35,8 +34,7 @@ class Product(Base):
     in_stock = db.Column(db.Integer, nullable=False)
     flash_sale = db.Column(db.Boolean, default=False)
 
-    category_id = db.Column(db.Integer, db.ForeignKey(
-        "categories.id"), nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey("categories.id"), nullable=False)
 
     images = db.relationship(
         "ProductImage", backref="product", lazy=True, cascade="all, delete-orphan"

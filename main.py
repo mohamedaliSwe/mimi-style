@@ -37,6 +37,7 @@ def create_app(config):
         doc="/docs",
     )
     api.add_namespace(auth_ns, path="/api/auth")
+    api.add_namespace(auth_ns, path="/api/auth")
 
     db.init_app(app)
     jwt.init_app(app)
