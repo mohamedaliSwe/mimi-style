@@ -36,10 +36,9 @@ login_model = auth_ns.model(
     {"email": fields.String(required=True), "password": fields.String(required=True)},
 )
 
-password_reset = auth_ns.model(
+password_reset_model = auth_ns.model(
     "Password Reset",
     {
-        "old_password": fields.String(required=True),
         "new_password": fields.String(required=True),
         "password_confirmation": fields.String(required=True),
     },
@@ -155,8 +154,31 @@ class VerifyUser(Resource):
 
             # Check if the token has expired
             if user.verification_token_expires < datetime.utcnow():
+                # Generate new token
+                new_token = secrets.token_urlsafe(32)
+                new_token_expires = datetime.utcnow() + timedelta(hours=1)
+                user.verification_token = new_token
+                user.verification_token_expires = new_token_expires
+                user.save()
+
+                # Send the verification token
+                EmailService.send_mail(
+                    subject="Verify your account",
+                    recipients=user.email,
+                    body=f"""
+                Hi {user.username},
+                Please verify your account by clicking the link below:
+                {HOST_URL}/api/auth/verify/{new_token}
+                This link will expire in 1 hour.
+                """,
+                )
                 return make_response(
-                    jsonify({"message": "Verification token expired"}), 400
+                    jsonify(
+                        {
+                            "message": f"Verification token expired! A new verification email has been sent to {user.email}"
+                        }
+                    ),
+                    400,
                 )
 
             # Verify the user
@@ -166,7 +188,8 @@ class VerifyUser(Resource):
             user.save()
 
             return make_response(
-                jsonify({"message": "User verified successfully"}), 200
+                jsonify({"message": "User verified successfully!."}),
+                200,
             )
 
         except Exception as e:
@@ -263,6 +286,7 @@ class UserProfile(Resource):
                 "telephone": user.telephone,
                 "is_verified": user.is_verified,
                 "created_at": user.created_at.isoformat(),
+                "address": user.address,
             }
 
             return make_response(jsonify({"user": user_data}), 200)
@@ -349,6 +373,109 @@ class UserProfile(Resource):
         except Exception as e:
             return make_response(
                 jsonify({"message": f"Error deleting account: {str(e)}"}), 500
+            )
+
+
+@auth_ns.route("/password/forget")
+class ForgetPassword(Resource):
+
+    def post(self):
+        """ "Send password reset token"""
+        try:
+            data = request.get_json()
+            email = data.get("email")
+
+            # Retrieve user and check if valid
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                return make_response(
+                    jsonify(
+                        {"message": "If this email exists, a reset link has been sent."}
+                    ),
+                    200,
+                )
+
+            # Generate a reset token
+            token = secrets.token_urlsafe(32)
+            token_expires = datetime.utcnow() + timedelta(hours=1)
+            user.reset_token = token
+            user.reset_token_expires = token_expires
+            user.save()
+
+            reset_link = f"{HOST_URL}/api/auth/password/reset/{token}"
+
+            # Send Reset Email
+            EmailService.send_mail(
+                subject="Password Reset",
+                recipients=user.email,
+                body=f"""
+                Hi {user.username},
+                To reset your password, click the link below:
+                {reset_link}
+                This link will expire in 1 hour.
+                """,
+            )
+            return make_response(
+                jsonify({"message": f"A reset link has been sent to {user.email}"}), 200
+            )
+
+        except Exception as e:
+            return make_response(
+                jsonify({"message": f"Error resetting password: {str(e)}"}), 500
+            )
+
+
+@auth_ns.route("/password/reset/<string:token>")
+class PasswordReset(Resource):
+
+    @auth_ns.expect(password_reset_model)
+    def post(self, token):
+        """Reset User Password using token"""
+        try:
+            # Get the user
+            user = User.query.filter_by(reset_token=token).first()
+
+            # Check if the token is valid
+            if not user:
+                return make_response(
+                    jsonify({"message": "Invalid or expired reset token"}), 404
+                )
+
+            # Check is if the token has expired
+            if user.reset_token_expires < datetime.utcnow():
+                return make_response(
+                    jsonify({"message": "Reset token has expired"}), 400
+                )
+
+            data = request.get_json()
+            new_password = data.get("new_password")
+            confirmation_password = data.get("password_confirmation")
+
+            # Check if both passwords have been provided
+            if not new_password or not confirmation_password:
+                return make_response(
+                    jsonify({"message": "Both password fields are required"}), 400
+                )
+
+            # Check if new password and confirmation match
+            if new_password != confirmation_password:
+                return make_response(
+                    jsonify({"message": "Passwords do not match"}), 400
+                )
+
+            # Update user information
+            user.password_hash = generate_password_hash(new_password)
+            user.reset_token = None
+            user.reset_token_expires = None
+            user.save()
+
+            return make_response(
+                jsonify({"message": "Password reset successfully"}), 200
+            )
+
+        except Exception as e:
+            return make_response(
+                jsonify({"message": f"Error resetting password: {str(e)}"}), 500
             )
 
 

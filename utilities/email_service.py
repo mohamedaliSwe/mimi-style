@@ -28,19 +28,20 @@ class EmailService:
 
     @staticmethod
     def send_template_email(
-        subject, body, recipients, template, context=None, sender=None
+        subject, body, recipients, template=None, context=None, sender=None
     ):
         """Send email using a template"""
         app = current_app._get_current_object()
         context = context or {}
+        html = None
 
-        html = render_template(template, **context)
+        if template:
+            html = render_template(template, **context)
 
-        if not body:
-            try:
-                text_template = template.replace(".html", ".txt")
-                body = render_template(text_template, **context)
-            except Exception:
-                body = EmailService._html_to_text(html)
-
+            if not body:
+                try:
+                    text_template = template.replace(".html", ".txt")
+                    body = render_template(text_template, **context)
+                except Exception:
+                    body = EmailService._html_to_text(html)
         EmailService.send_mail(subject, recipients, body, html, sender)
