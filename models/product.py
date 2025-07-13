@@ -7,7 +7,7 @@ class Category(Base):
     __tablename__ = "categories"
     name = db.Column(db.String(100), unique=True, nullable=False)
 
-    products = db.relationship("Product", backref="category", lazy=True)
+    products = db.relationship("Product", backref="category", lazy="dynamic")
 
     def __repr__(self):
         return f"<Category {self.name}>"

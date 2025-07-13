@@ -30,6 +30,15 @@ class Config:
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
     MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER")
 
+    # Uploads Folder
+    MEDIA_PATH = os.path.join(BASE_DIR, "media")
+    PRODUCT_IMAGES_FOLDER = os.path.join(MEDIA_PATH, "product_images")
+    RECEIPTS_FOLDER = os.path.join(MEDIA_PATH, "receipts")
+
+    os.makedirs(MEDIA_PATH, exist_ok=True)
+    os.makedirs(PRODUCT_IMAGES_FOLDER, exist_ok=True)
+    os.makedirs(RECEIPTS_FOLDER, exist_ok=True)
+
 
 class DevConfig(Config):
     """Defines Development configurations"""
