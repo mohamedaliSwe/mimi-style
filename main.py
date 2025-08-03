@@ -2,7 +2,7 @@ from flask import Flask, make_response, jsonify
 from flask_restx import Api, Resource
 
 from exts import db, jwt, migrate, mail
-from api import auth_ns, product_ns, categories_ns
+from api import auth_ns, product_ns, categories_ns, product_images_ns
 from models import (
     Role,
     User,
@@ -39,6 +39,7 @@ def create_app(config):
     api.add_namespace(auth_ns, path="/api/auth")
     api.add_namespace(product_ns, path="/api/product")
     api.add_namespace(categories_ns, path="/api/categories")
+    api.add_namespace(product_images_ns, path="/api/images")
 
     db.init_app(app)
     jwt.init_app(app)

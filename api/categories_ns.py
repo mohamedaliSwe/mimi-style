@@ -20,6 +20,8 @@ category_product_pagination_model = create_pagination_model(
     categories_ns, "products", product_model
 )
 
+#
+
 
 @categories_ns.route("/")
 class CategoryList(Resource):
